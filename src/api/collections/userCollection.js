@@ -1,6 +1,6 @@
 const BaseCollection = require("./baseCollection");
 
-const table = "User";
+const table = "user";
 
 class UserCollection extends BaseCollection {
     constructor() {

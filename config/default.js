@@ -8,7 +8,7 @@ module.exports = {
 
     mysqldb: {
         host: 'localhost',
-        port: '3306',
+        port: '3939',
         dbname: 'usth_document_search',
         username: 'root',
         passwrd: '123456',
