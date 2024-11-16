@@ -13,4 +13,6 @@ module.exports = {
         username: 'root',
         passwrd: '123456',
     },
+
+    secretKey: 'AQ8k7lKr5cxe6haFLouwBJorJtmjp0LQuiU1Fs',
 }
