@@ -10,6 +10,36 @@ class UserService {
         this.repo = new UserRepository();
     }
 
+    async list(params) {
+        let isLimit = true;
+
+        // set default page, limit
+        const page = 1;
+        const limit = 10;
+
+        // set paging
+        if (params.page !== undefined) {
+            if (params.limit !== undefined) this.col.setLimit(params.limit);
+            this.col.setOffset(parseInt(params.page));
+        } else {
+            this.col.setLimit(limit);
+            this.col.setOffset(page);
+        }
+        //
+        if (params.limit === -999) isLimit = false;
+
+        this.col.filters(params);
+        const sql = this.col.finallize(isLimit);
+
+        const [data] = await this.handle(this.repo.list(sql));
+
+        return {
+            returnCode: 200,
+            returnMessage: "Login successfully",
+            data: data,
+        };
+    }
+
     async signIn(params) {
         this.col.filters({
             username: params.username,
@@ -23,6 +53,14 @@ class UserService {
                 { returnCode: 1, returnMessage: "Account not found" },
                 404
             );
+        }
+
+        data = data[0];
+        if (!Boolean(data.active)) {
+            throw new ErrorResp({
+                returnCode: 2,
+                returnMessage: "Account not yet active",
+            });
         }
 
         if (data.password !== params.password) {
