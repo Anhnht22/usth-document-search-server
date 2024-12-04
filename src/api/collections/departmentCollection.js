@@ -2,7 +2,7 @@ const BaseCollection = require("./baseCollection");
 
 const table = "department";
 
-class departmentCollection extends BaseCollection {
+class DepartmentCollection extends BaseCollection {
     constructor() {
         super(table);
     }
@@ -36,4 +36,4 @@ class departmentCollection extends BaseCollection {
     }
 }
 
-module.exports = departmentCollection;
+module.exports = DepartmentCollection;

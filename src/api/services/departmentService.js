@@ -87,6 +87,7 @@ class DepartmentService {
                 );
             }
         }
+
         this.col.check(params);
         const sql = this.col.finallize(true);
         let [dataCheck] = await this.handle(this.repo.list(sql));
@@ -97,20 +98,34 @@ class DepartmentService {
             );
         }
 
-        const [data] = await this.handle(this.repo.create(params));
+        const conn = await this.repo.getConnection();
+        conn.beginTransaction();
 
-        if (data === undefined) {
-            throw new ErrorResp(
-                { returnCode: 1, returnMessage: "Create fail" },
-                404
+        try {
+            const [data, err] = await this.handle(
+                this.repo.create(params, conn)
             );
-        } else {
+
+            if (err) {
+                throw new ErrorResp({
+                    returnCode: 3,
+                    returnMessage: "Create department fail",
+                    trace: err,
+                });
+            }
+
             return {
                 returnCode: 200,
                 returnMessage: "Create successfully",
                 data: data,
             };
-        };
+        } catch (error) {
+            conn.rollback();
+            throw error;
+        } finally {
+            conn.commit();
+            conn.release();
+        }
     }
 
     async update(params, id) {
@@ -173,7 +188,7 @@ class DepartmentService {
                 returnMessage: "Update successfully",
                 data: data,
             };
-        };
+        }
     }
 
     async delete(id) {
@@ -185,7 +200,7 @@ class DepartmentService {
         }
 
         const [data] = await this.handle(this.repo.delete("department_id", id));
-        
+
         if (data === undefined) {
             throw new ErrorResp(
                 { returnCode: 1, returnMessage: "Delete fail" },
@@ -208,7 +223,9 @@ class DepartmentService {
             );
         }
 
-        const [data] = await this.handle(this.repo.deletedPermanently("department_id", id));
+        const [data] = await this.handle(
+            this.repo.deletedPermanently("department_id", id)
+        );
 
         if (data === undefined) {
             throw new ErrorResp(
