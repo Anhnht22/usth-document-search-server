@@ -1,4 +1,4 @@
-const db = require('../../adapter/mySqlClient');
+const db = require("../../adapter/mySqlClient");
 
 class BaseRepository {
     constructor(table) {
@@ -6,18 +6,24 @@ class BaseRepository {
         this.db = db;
     }
 
-    list(sql) {
+    async getConnection() {
+        return await this.db.connection.getConnection();
+    }
+
+    list(sql, conn = null) {
         return new Promise((resolve, reject) => {
-            this.db.connection.query(sql)
-                .then(res => resolve(res))
-                .catch(err => reject(err))
+            this.db.connection
+                .query(sql, null, conn)
+                .then((res) => resolve(res))
+                .catch((err) => reject(err));
         });
     }
 
     listCount(sql) {
         return new Promise((resolve, reject) => {
-            this.db.connection.query(sql)
-                .then(rows => {
+            this.db.connection
+                .query(sql)
+                .then((rows) => {
                     if (rows.length == 0) {
                         resolve(null);
                     }
@@ -27,14 +33,15 @@ class BaseRepository {
 
                     resolve(json[0]);
                 })
-                .catch(err => reject(err))
+                .catch((err) => reject(err));
         });
     }
 
     show(sql) {
         return new Promise((resolve, reject) => {
-            this.db.connection.query(sql)
-                .then(rows => {
+            this.db.connection
+                .query(sql)
+                .then((rows) => {
                     if (rows.length == 0) {
                         resolve(null);
                     }
@@ -44,18 +51,18 @@ class BaseRepository {
 
                     resolve(json[0]);
                 })
-                .catch(err => reject(err))
+                .catch((err) => reject(err));
         });
     }
 
     showByColumn(value, column) {
-
         const sql = `SELECT t.*
                      FROM ${this.table} t
                      WHERE t.${column} = ${value} LIMIT 1`;
         return new Promise((resolve, reject) => {
-            this.db.connection.query(sql)
-                .then(rows => {
+            this.db.connection
+                .query(sql)
+                .then((rows) => {
                     if (rows.length == 0) {
                         resolve(null);
                     }
@@ -65,12 +72,11 @@ class BaseRepository {
 
                     resolve(json[0]);
                 })
-                .catch(err => reject(err))
+                .catch((err) => reject(err));
         });
     }
 
     showByColumnManyColumn(params) {
-
         let keys = Object.keys(params);
         let values = Object.values(params);
 
@@ -78,7 +84,8 @@ class BaseRepository {
         let objectParams = [];
         for (let i = 0; i < keys.length; i++) {
             if (![undefined, null].includes(values[i])) {
-                stringKeys += (stringKeys === "" ? keys[i] : ' AND ' + keys[i]) + "=?";
+                stringKeys +=
+                    (stringKeys === "" ? keys[i] : " AND " + keys[i]) + "=?";
                 objectParams.push(values[i]);
             }
         }
@@ -87,8 +94,9 @@ class BaseRepository {
                      FROM ${this.table}
                      WHERE ${stringKeys} LIMIT 1`;
         return new Promise((resolve, reject) => {
-            this.db.connection.query(sql, objectParams)
-                .then(rows => {
+            this.db.connection
+                .query(sql, objectParams)
+                .then((rows) => {
                     if (rows.length == 0) {
                         resolve(null);
                     }
@@ -98,11 +106,11 @@ class BaseRepository {
 
                     resolve(json[0]);
                 })
-                .catch(err => reject(err))
+                .catch((err) => reject(err));
         });
     }
 
-    create(params) {
+    create(params, conn = null) {
         let keys = Object.keys(params);
         let values = Object.values(params);
 
@@ -111,7 +119,7 @@ class BaseRepository {
         let objectParams = [];
         for (let i = 0; i < keys.length; i++) {
             if (![undefined, null].includes(values[i])) {
-                stringKeys += stringKeys === "" ? keys[i] : ', ' + keys[i];
+                stringKeys += stringKeys === "" ? keys[i] : ", " + keys[i];
                 stringValues += stringValues === "" ? `?` : `, ?`;
                 objectParams.push(values[i]);
             }
@@ -121,9 +129,10 @@ class BaseRepository {
                      VALUES (${stringValues})`;
 
         return new Promise((resolve, reject) => {
-            this.db.connection.query(sql, objectParams)
-                .then(res => resolve(res))
-                .catch(err => reject(err))
+            this.db.connection
+                .query(sql, objectParams, conn)
+                .then((res) => resolve(res))
+                .catch((err) => reject(err));
         });
     }
 
@@ -135,7 +144,8 @@ class BaseRepository {
         let objectParams = [];
         for (let i = 0; i < keys.length; i++) {
             if (values[i]) {
-                stringKeys += stringKeys === "" ? `${keys[i]}=?` : `, ${keys[i]}=?`;
+                stringKeys +=
+                    stringKeys === "" ? `${keys[i]}=?` : `, ${keys[i]}=?`;
                 objectParams.push(values[i]);
             }
         }
@@ -146,9 +156,10 @@ class BaseRepository {
                    WHERE ${this.table}_id = ?`;
 
         return new Promise((resolve, reject) => {
-            this.db.connection.query(sql, objectParams)
-                .then(res => resolve(res))
-                .catch(err => reject(err))
+            this.db.connection
+                .query(sql, objectParams)
+                .then((res) => resolve(res))
+                .catch((err) => reject(err));
         });
     }
 
@@ -160,7 +171,8 @@ class BaseRepository {
         let objectParams = [];
         for (let i = 0; i < keys.length; i++) {
             if (![undefined, null].includes(values[i])) {
-                stringKeys += stringKeys === "" ? `${keys[i]}=?` : `, ${keys[i]}=?`;
+                stringKeys +=
+                    stringKeys === "" ? `${keys[i]}=?` : `, ${keys[i]}=?`;
                 objectParams.push(values[i]);
             }
         }
@@ -171,9 +183,40 @@ class BaseRepository {
                    WHERE ${column} = ?`;
 
         return new Promise((resolve, reject) => {
-            this.db.connection.query(sql, objectParams)
-                .then(res => resolve(res))
-                .catch(err => reject(err))
+            this.db.connection
+                .query(sql, objectParams)
+                .then((res) => resolve(res))
+                .catch((err) => reject(err));
+        });
+    }
+
+    delete(column, value) {
+        let objectParams = [];
+
+        objectParams.push(value);
+        let sql = `UPDATE ${this.table}
+                   SET active = 0
+                   WHERE ${column} = ?`;
+
+        return new Promise((resolve, reject) => {
+            this.db.connection
+                .query(sql, objectParams)
+                .then((res) => resolve(res))
+                .catch((err) => reject(err));
+        });
+    }
+
+    deletedPermanently(column, id) {
+        let objectParams = [];
+
+        objectParams.push(id);
+        let sql = `DELETE FROM ${this.table} WHERE ${column} = ?`;
+
+        return new Promise((resolve, reject) => {
+            this.db.connection
+                .query(sql, objectParams)
+                .then((res) => resolve(res))
+                .catch((err) => reject(err));
         });
     }
 
@@ -189,7 +232,8 @@ class BaseRepository {
         let stringKeys = "";
         for (let i = 0; i < keys.length; i++) {
             if (![undefined, null].includes(values[i])) {
-                stringKeys += stringKeys === "" ? `${keys[i]}=?` : `, ${keys[i]}=?`;
+                stringKeys +=
+                    stringKeys === "" ? `${keys[i]}=?` : `, ${keys[i]}=?`;
                 objectParams.push(values[i]);
             }
         }
@@ -197,7 +241,10 @@ class BaseRepository {
         let stringKeysWhereClause = "";
         for (let i = 0; i < keysWhereClause.length; i++) {
             if (![undefined, null].includes(valuesWhereClause[i])) {
-                stringKeysWhereClause += stringKeysWhereClause === "" ? `${keysWhereClause[i]}=?` : ` AND ${keysWhereClause[i]}=?`;
+                stringKeysWhereClause +=
+                    stringKeysWhereClause === ""
+                        ? `${keysWhereClause[i]}=?`
+                        : ` AND ${keysWhereClause[i]}=?`;
                 objectParams.push(valuesWhereClause[i]);
             }
         }
@@ -207,29 +254,26 @@ class BaseRepository {
                    WHERE ${stringKeysWhereClause}`;
 
         return new Promise((resolve, reject) => {
-            this.db.connection.query(sql, objectParams)
-                .then(res => resolve(res))
-                .catch(err => reject(err))
+            this.db.connection
+                .query(sql, objectParams)
+                .then((res) => resolve(res))
+                .catch((err) => reject(err));
         });
     }
 
     executeSql(sql) {
         return new Promise((resolve, reject) => {
-                this.db.connection.query(sql,
-                    (err, rows) => {
-                        if (err)
-                            reject(err);
-                        else {
-                            resolve(rows);
-                        }
-                    }
-                )
-            }
-        );
+            this.db.connection.query(sql, (err, rows) => {
+                if (err) reject(err);
+                else {
+                    resolve(rows);
+                }
+            });
+        });
     }
 
     updateMulti(sqls) {
-        const arrPromise = sqls.map(sql => {
+        const arrPromise = sqls.map((sql) => {
             return new Promise((resolve, reject) => {
                 this.db.connection.query(sql, (err, rows) => {
                     if (err) reject(err);
@@ -241,10 +285,6 @@ class BaseRepository {
         return Promise.race(arrPromise);
     }
 
-    delete(id) {
-
-    }
-
     getCountFiltered(sql) {
         return new Promise((resolve, reject) => {
             this.db.connection.query(sql, (err, rows) => {
@@ -253,14 +293,18 @@ class BaseRepository {
                     resolve(rows[0].total);
                 }
             });
-        })
+        });
     }
 
     catchError(error) {
         if (error.response.status === 401) {
-            return {returnCode: 401, data: null, returnMessage: 'Không có quyền truy cập'};
+            return {
+                returnCode: 401,
+                data: null,
+                returnMessage: "Không có quyền truy cập",
+            };
         } else {
-            return {returnCode: 99, data: null, returnMessage: 'Lỗi'};
+            return { returnCode: 99, data: null, returnMessage: "Lỗi" };
         }
     }
 }

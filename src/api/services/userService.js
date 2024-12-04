@@ -5,11 +5,26 @@ const UserCollection = require("../collections/userCollection");
 const UserRepository = require("../repositories/userRepository");
 const { getMD5Hash } = require("../../utils/stringUtils");
 const RoleService = require("./roleService");
+const UserDepartmentCollection = require("../collections/userDepartmentCollection");
+const UserDepartmentRepository = require("../repositories/userDepartmentRepository");
+const DepartmentCollection = require("../collections/departmentCollection");
+const DepartmentRepository = require("../repositories/departmentRepository");
+const RoleCollection = require("../collections/roleCollection");
+const RoleRepository = require("../repositories/roleRepository");
 
 class UserService {
     constructor() {
         this.col = new UserCollection();
         this.repo = new UserRepository();
+
+        this.departmentCol = new DepartmentCollection();
+        this.departmentRepo = new DepartmentRepository();
+
+        this.userDepartmentCol = new UserDepartmentCollection();
+        this.userDepartmentRepo = new UserDepartmentRepository();
+
+        this.roleCol = new RoleCollection();
+        this.roleRepo = new RoleRepository();
     }
 
     async list(params) {
@@ -55,6 +70,7 @@ class UserService {
             data: data,
         };
     }
+
     async listUser(params) {
         const { order } = params;
 
@@ -86,10 +102,22 @@ class UserService {
         }
 
         const sqlPage = this.col.sqlCount(isLimit);
-        const sql = this.col.finallize(isLimit);
-
-        const [data] = await this.handle(this.repo.list(sql));
         const [total] = await this.handle(this.repo.list(sqlPage));
+
+        const sql = this.col.finallize(isLimit);
+        const [data, err] = await this.handle(this.repo.list(sql));
+        if (err) {
+            throw new ErrorResp({
+                returnCode: 1,
+                returnMessage: "Data not found",
+                trace: err,
+            });
+        }
+
+        const listUserId = [];
+        data.forEach((item) => {
+            listUserId.push(item.user_id);
+        });
 
         return {
             returnCode: 200,
@@ -128,11 +156,32 @@ class UserService {
             });
         }
 
+        this.roleCol.filters({
+            role_id: data.role_id,
+        });
+        const [roleData, roleErr] = await this.handle(
+            this.repo.list(this.roleCol.finallize(false))
+        );
+        if (
+            roleErr ||
+            !roleData ||
+            roleData.length < 1
+        ) {
+            throw new ErrorResp(
+                {
+                    returnCode: 1,
+                    returnMessage: "Role not found",
+                },
+                404
+            );
+        }
+
         const secretKey = config.get("secretKey");
         const token = jwt.sign(
             {
                 username: data.username,
                 email: data.email,
+                role: roleData[0].role_name,
             },
             secretKey,
             { expiresIn: "1h" }
@@ -197,10 +246,13 @@ class UserService {
                 404
             );
         } else {
-            let username = params.username
+            let username = params.username;
             if (username.length === 0 || username.length >= 255) {
                 throw new ErrorResp(
-                    { returnCode: 2, returnMessage: "Username exceed character" },
+                    {
+                        returnCode: 2,
+                        returnMessage: "Username exceed character",
+                    },
                     404
                 );
             }
@@ -211,65 +263,138 @@ class UserService {
                 404
             );
         } else {
-            let email = params.email
+            let email = params.email;
             if (email.length === 0 || email.length >= 255) {
                 throw new ErrorResp(
                     { returnCode: 2, returnMessage: "Email exceed character" },
                     404
                 );
             }
-        }   
+        }
         if (params.password === undefined) {
             throw new ErrorResp(
                 { returnCode: 1, returnMessage: "Password is required" },
                 404
             );
         } else {
-            let password = params.password
+            let password = params.password;
             if (password.length === 0 || password.length >= 255) {
                 throw new ErrorResp(
-                    { returnCode: 2, returnMessage: "Password exceed character" },
+                    {
+                        returnCode: 2,
+                        returnMessage: "Password exceed character",
+                    },
                     404
                 );
             }
         }
+
         if (params.role_id === undefined || params.role_id == 0) {
             throw new ErrorResp(
                 { returnCode: 1, returnMessage: "Role not found" },
                 404
             );
         }
-        const roleService = new RoleService();
-        const roleData = await roleService.list({
+
+        this.roleCol.filters({
             role_id: params.role_id,
             active: 1,
         });
-        if (roleData.data.length < 1) {
+        const [roleData, roleErr] = await this.handle(
+            this.repo.list(this.roleCol.finallize(false))
+        );
+        if (
+            roleErr ||
+            !roleData ||
+            roleData.length < 1
+        ) {
             throw new ErrorResp(
-                { returnCode: 1, returnMessage: "Role not found" },
+                {
+                    returnCode: 1,
+                    returnMessage: "Role not found",
+                },
                 404
             );
         }
-        const [data] = await this.handle(this.repo.create({
-            ...params,
-            password: getMD5Hash(params.password),
-        }));
-        
-        if (data === undefined) {
-            throw new ErrorResp(
-                { returnCode: 1, returnMessage: "Username or Email has existed" },
-                404
+
+        const conn = await this.repo.getConnection();
+        conn.beginTransaction();
+
+        try {
+            const { department_ids, ...paramsCreate } = params;
+            const [data, err] = await this.handle(
+                this.repo.create(
+                    {
+                        ...paramsCreate,
+                        password: getMD5Hash(paramsCreate.password),
+                    },
+                    conn
+                )
             );
-        } else {
+
+            if (err) {
+                throw new ErrorResp(
+                    {
+                        returnCode: 1,
+                        returnMessage: "Username or Email has existed",
+                        trace: err,
+                    },
+                    404
+                );
+            }
+
+            for (let i = 0; i < department_ids.length; i++) {
+                const department_id = department_ids[i];
+
+                this.departmentCol.filters({
+                    department_id: department_id,
+                    active: 1,
+                });
+                const [departmentData, departmentErr] = await this.handle(
+                    this.repo.list(this.col.finallize(false))
+                );
+
+                if (
+                    departmentErr ||
+                    !departmentData ||
+                    departmentData.length < 1
+                ) {
+                    throw new ErrorResp(
+                        {
+                            returnCode: 1,
+                            returnMessage: "Department not found",
+                        },
+                        404
+                    );
+                }
+
+                await this.handle(
+                    this.userDepartmentRepo.create(
+                        {
+                            user_id: data.insertId,
+                            department_id: department_id,
+                            active: 1,
+                        },
+                        conn
+                    )
+                );
+            }
+
             return {
                 returnCode: 200,
                 returnMessage: "Create successfully",
                 data: data,
             };
+        } catch (error) {
+            conn.rollback();
+            throw error;
+        } finally {
+            conn.commit();
+            conn.release();
         }
     }
 
-    async update(params,id) {
+    async update(params, id) {
         if (id === undefined || id == 0) {
             throw new ErrorResp(
                 { returnCode: 1, returnMessage: "User ID not found" },
@@ -277,16 +402,19 @@ class UserService {
             );
         }
         if (params.username !== undefined) {
-            let username = params.username
+            let username = params.username;
             if (username.length === 0 || username.length >= 255) {
                 throw new ErrorResp(
-                    { returnCode: 2, returnMessage: "Username exceed character" },
+                    {
+                        returnCode: 2,
+                        returnMessage: "Username exceed character",
+                    },
                     404
                 );
             }
         }
         if (params.email !== undefined) {
-            let email = params.email
+            let email = params.email;
             if (email.length === 0 || email.length >= 255) {
                 throw new ErrorResp(
                     { returnCode: 2, returnMessage: "Email exceed character" },
@@ -311,13 +439,57 @@ class UserService {
                 404
             );
         }
+        const [data, err] = await this.handle(
+            this.repo.updateByColumn("user_id", id, {
+                ...params,
+            })
+        );
+
+        if (data === undefined) {
+            throw new ErrorResp(
+                {
+                    returnCode: 1,
+                    returnMessage: "Username or Email has existed",
+                },
+                404
+            );
+        } else {
+            return {
+                returnCode: 200,
+                returnMessage: "Update successfully",
+                data: data,
+            };
+        }
+    }
+
+    async updatePass(params,id) {
+        if (id === undefined || id == 0) {
+            throw new ErrorResp(
+                { returnCode: 1, returnMessage: "User ID not found" },
+                404
+            );
+        }
+        if (params.password === undefined) {
+            throw new ErrorResp(
+                { returnCode: 1, returnMessage: "Password is required" },
+                404
+            );
+        } else {
+            let password = params.password
+            if (password.length === 0 || password.length >= 255) {
+                throw new ErrorResp(
+                    { returnCode: 2, returnMessage: "Password exceed character" },
+                    404
+                );
+            }
+        }
         const [data, err] = await this.handle(this.repo.updateByColumn("user_id",id,{
-            ...params,
+            password: getMD5Hash(params.password),
         }));
 
         if (data === undefined) {
             throw new ErrorResp(
-                { returnCode: 1, returnMessage: "Username or Email has existed" },
+                { returnCode: 1, returnMessage: "Update fail" },
                 404
             );
         } else {
@@ -337,7 +509,7 @@ class UserService {
             );
         }
 
-        const [data] = await this.handle(this.repo.delete("user_id",id));
+        const [data] = await this.handle(this.repo.delete("user_id", id));
         if (data === undefined) {
             throw new ErrorResp(
                 { returnCode: 1, returnMessage: "Delete fail" },
@@ -360,7 +532,9 @@ class UserService {
             );
         }
 
-        const [data] = await this.handle(this.repo.deletedPermanently("user_id", id));
+        const [data] = await this.handle(
+            this.repo.deletedPermanently("user_id", id)
+        );
         if (data === undefined) {
             throw new ErrorResp(
                 { returnCode: 1, returnMessage: "Delete Permanently fail" },
