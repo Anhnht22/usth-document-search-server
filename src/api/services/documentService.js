@@ -5,6 +5,7 @@ const moment = require("moment");
 const TopicService = require("./topicService");
 const path = require("path");
 const { sanitizePath, DIR, isValidFolder } = require("../../utils/fileHandler");
+const ReviewService = require("./reviewService");
 
 class documentService {
     constructor() {
@@ -164,6 +165,7 @@ class documentService {
                 description: params.description,
                 upload_date: +moment(),
                 active: params.active || 1,
+                status: "DRAFT",
             })
         );
         if (data === undefined) {
@@ -188,6 +190,7 @@ class documentService {
                 404
             );
         }
+
         if (params.title === undefined) {
             throw new ErrorResp(
                 { returnCode: 1, returnMessage: "Title is required" },
@@ -205,6 +208,7 @@ class documentService {
                 );
             }
         }
+
         if (params.description === undefined) {
             throw new ErrorResp(
                 { returnCode: 1, returnMessage: "Description is required" },
@@ -265,20 +269,35 @@ class documentService {
                 404
             );
         }
+
         const topicService = new TopicService();
         const topicData = await topicService.list({
             topic_id: params.topic_id,
             active: 1,
         });
+
         if (topicData.data.length < 1) {
             throw new ErrorResp(
                 { returnCode: 1, returnMessage: "Topic not found" },
                 404
             );
         }
+
         this.col.check(params);
         const sql = this.col.finallize(true);
-        let [dataCheck] = await this.handle(this.repo.list(sql));
+        let [dataCheck, errCheck] = await this.handle(this.repo.list(sql));
+
+        if (errCheck || !dataCheck || dataCheck.length < 1) {
+            throw new ErrorResp(
+                {
+                    returnCode: 1,
+                    returnMessage: "Document not found",
+                    trace: errCheck,
+                },
+                404
+            );
+        }
+
         if (dataCheck.length >= 1 && dataCheck[0].document_id != id) {
             throw new ErrorResp(
                 { returnCode: 3, returnMessage: "Document already exists" },
@@ -286,7 +305,7 @@ class documentService {
             );
         }
 
-        const { folder, ...updateParams } = params;
+        const { folder, reason, ...updateParams } = params;
         const [data, err] = await this.handle(
             this.repo.updateByColumn("document_id", id, {
                 ...updateParams,
@@ -294,18 +313,33 @@ class documentService {
                 upload_date: date,
             })
         );
-        if (data === undefined) {
+
+        if (err) {
             throw new ErrorResp(
                 { returnCode: 1, returnMessage: "Update fail", trace: err },
                 404
             );
-        } else {
-            return {
-                returnCode: 200,
-                returnMessage: "Update successfully",
-                data: data,
-            };
         }
+
+        try {
+            if (params.status && dataCheck[0].status !== params.status) {
+                const documentReviewService = new ReviewService();
+                await documentReviewService.create(
+                    {
+                        document_id: id,
+                        status: params.status,
+                        reason: reason,
+                    },
+                    userData
+                );
+            }
+        } catch (error) {}
+
+        return {
+            returnCode: 200,
+            returnMessage: "Update successfully",
+            data: data,
+        };
     }
 
     async delete(id) {

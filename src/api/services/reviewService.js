@@ -1,9 +1,9 @@
 const ReviewCollection = require("../collections/reviewCollection");
 const ReviewRepository = require("../repositories/reviewRepository");
 const ErrorResp = require("../../utils/errorUtils");
-const moment = require('moment');
+const moment = require("moment");
 
-class reviewService {
+class ReviewService {
     constructor() {
         this.col = new ReviewCollection();
         this.repo = new ReviewRepository();
@@ -53,7 +53,7 @@ class reviewService {
         };
     }
 
-    async create(params,userData) {
+    async create(params, userData) {
         let date = +moment();
         if (params.document_id === undefined || params.document_id == 0) {
             throw new ErrorResp(
@@ -61,26 +61,31 @@ class reviewService {
                 404
             );
         }
-        const [data] = await this.handle(this.repo.create({
-            document_id: params.document_id,
-            reviewer_id: userData.user_id,
-            review_date: date,
-        }));
-        if (data === undefined) {
+        const [data, err] = await this.handle(
+            this.repo.create({
+                document_id: params.document_id,
+                reviewer_id: userData.user_id,
+                review_date: date,
+                status: params.status,
+                reason: params.reason,
+            })
+        );
+
+        if (err) {
             throw new ErrorResp(
-                { returnCode: 1, returnMessage: "Create fail" },
+                { returnCode: 1, returnMessage: "Create fail", trace: err },
                 404
             );
-        } else {
-            return {
-                returnCode: 200,
-                returnMessage: "Create successfully",
-                data: data,
-            };
         }
+
+        return {
+            returnCode: 200,
+            returnMessage: "Create successfully",
+            data: data,
+        };
     }
 
-    async update(params,id,userData) {
+    async update(params, id, userData) {
         let date = +moment();
         if (id === undefined || id == 0) {
             throw new ErrorResp(
@@ -94,7 +99,7 @@ class reviewService {
                 404
             );
         } else {
-            let status = params.status
+            let status = params.status;
             if (status.length === 0 || status.length >= 255) {
                 throw new ErrorResp(
                     { returnCode: 2, returnMessage: "Status exceed character" },
@@ -103,11 +108,13 @@ class reviewService {
             }
         }
 
-        const [data] = await this.handle(this.repo.updateByColumn("review_id",id,{
-            status: params.status,
-            reviewer_id: userData.user_id,
-            review_date: date,
-        }));
+        const [data] = await this.handle(
+            this.repo.updateByColumn("review_id", id, {
+                status: params.status,
+                reviewer_id: userData.user_id,
+                review_date: date,
+            })
+        );
 
         if (data === undefined) {
             throw new ErrorResp(
@@ -131,7 +138,7 @@ class reviewService {
             );
         }
 
-        const [data] = await this.handle(this.repo.delete("review_id",id));
+        const [data] = await this.handle(this.repo.delete("review_id", id));
 
         if (data === undefined) {
             throw new ErrorResp(
@@ -155,7 +162,9 @@ class reviewService {
             );
         }
 
-        const [data] = await this.handle(this.repo.deletedPermanently("review_id", id));
+        const [data] = await this.handle(
+            this.repo.deletedPermanently("review_id", id)
+        );
 
         if (data === undefined) {
             throw new ErrorResp(
@@ -178,4 +187,4 @@ class reviewService {
     }
 }
 
-module.exports = reviewService;
+module.exports = ReviewService;

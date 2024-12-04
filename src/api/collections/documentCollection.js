@@ -80,6 +80,17 @@ class documentCollection extends BaseCollection {
                 this.andWhere("t.active", "=", actives);
             }
         }
+
+        if (params.document_status) {
+            const documentStatusList = params.document_status;
+            if (Array.isArray(documentStatusList)) {
+                for (let i = 0; i < documentStatusList.length; i++) {
+                    this.andOrWhere("t.status", "=", documentStatusList[i], (i == 0) ? "first" : (i == documentStatusList.length-1) ? "last" : "middle");
+                }
+            } else {
+                this.andWhere("t.status", "=", documentStatusList);
+            }
+        }
     }
     check(params){
         if (params.title) {
