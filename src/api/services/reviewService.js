@@ -39,7 +39,7 @@ class ReviewService {
             });
         }
 
-        const sqlPage = this.col.sqlCount(isLimit);
+        const sqlPage = this.col.finallizeTotalCount(isLimit);
         const sql = this.col.finallize(isLimit);
 
         const [data] = await this.handle(this.repo.list(sql));
@@ -53,7 +53,7 @@ class ReviewService {
         };
     }
 
-    async create(params, userData) {
+    async create(params, userData, conn = null) {
         let date = +moment();
         if (params.document_id === undefined || params.document_id == 0) {
             throw new ErrorResp(
@@ -68,7 +68,9 @@ class ReviewService {
                 review_date: date,
                 status: params.status,
                 reason: params.reason,
-            })
+                },
+            conn
+            )
         );
 
         if (err) {
