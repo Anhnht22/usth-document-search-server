@@ -46,20 +46,22 @@ const storage = multer.diskStorage({
             .replace(/đ/g, "d")
             .replace(/[^\x00-\x7F]/g, "");
 
-        const uniqueName =
-            Date.now() +
-            "-" +
-            Math.round(Math.random() * 1e9) +
-            "-" +
-            file.originalname;
-
-        cb(null, uniqueName);
+        cb(null, Date.now() + "-" + fileName);
     },
 });
 
 // Bộ lọc loại file
 const fileFilter = (req, file, cb) => {
-    const allowedMimeTypes = ["image/jpeg", "image/png", "application/pdf"]; // Các loại file được phép
+    const allowedMimeTypes = [
+        "image/jpeg",
+        "image/png",
+        "application/pdf",
+        "application/msword", // .doc
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
+        "application/vnd.ms-excel", // .xls
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
+        "text/plain", // .txt
+    ];
 
     if (!allowedMimeTypes.includes(file.mimetype)) {
         const allowedTypes = allowedMimeTypes.join(", "); // Ghép các loại file được phép thành chuỗi

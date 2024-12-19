@@ -1,11 +1,21 @@
 const DepartmentCollection = require("../collections/departmentCollection");
 const DepartmentRepository = require("../repositories/departmentRepository");
 const ErrorResp = require("../../utils/errorUtils");
+const UserCollection = require("../collections/userCollection");
+const UserRepository = require("../repositories/userRepository");
+const UserDepartmentCollection = require("../collections/userDepartmentCollection");
+const UserDepartmentRepository = require("../repositories/userDepartmentRepository");
 
 class DepartmentService {
     constructor() {
         this.col = new DepartmentCollection();
         this.repo = new DepartmentRepository();
+
+        this.colUser = new UserCollection();
+        this.repoUser = new UserRepository();
+
+        this.colUserDepartment = new UserDepartmentCollection();
+        this.repoUserDepartment = new UserDepartmentRepository();
     }
 
     async list(params) {
@@ -38,11 +48,48 @@ class DepartmentService {
             });
         }
 
-        const sqlPage = this.col.sqlCount(isLimit);
+        const sqlPage = this.col.finallizeTotalCount(isLimit);
         const sql = this.col.finallize(isLimit);
 
-        const [data] = await this.handle(this.repo.list(sql));
+        const [data, err] = await this.handle(this.repo.list(sql));
+
+        if (err) {
+            throw new ErrorResp({
+                returnCode: 1,
+                returnMessage: "Data not found",
+                trace: err,
+            });
+        }
+
         const [total] = await this.handle(this.repo.list(sqlPage));
+
+        const listId = data?.map((item) => item.department_id) || [];
+
+        if (listId.length > 0) {
+            this.colUserDepartment.addSelect([
+                "t.department_id",
+                "u.*"
+            ]);
+
+            this.colUserDepartment.join(`${this.colUser.table} u`, "u.user_id", "t.user_id", "LEFT");
+
+            this.colUserDepartment.andWhereIn("t.department_id", "IN", listId.join(","));
+
+            const sqlUserDepartment = this.colUserDepartment.finallize(false);
+            const [dataUserDepartment, errUserDepartment] = await this.handle(this.repoUserDepartment.list(sqlUserDepartment));
+
+            if (errUserDepartment) {
+                throw new ErrorResp({
+                    returnCode: 1,
+                    returnMessage: "Data User Department not found",
+                    trace: errUserDepartment,
+                });
+            }
+
+            data.forEach((item) => {
+                item.users = dataUserDepartment.filter((user) => user.department_id == item.department_id) || [];
+            });
+        }
 
         return {
             returnCode: 200,

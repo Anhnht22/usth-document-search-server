@@ -2,10 +2,10 @@ const BaseRepository = require("./baseRepository");
 
 const table = "department";
 
-class departmentRepository extends BaseRepository {
+class DepartmentRepository extends BaseRepository {
     constructor() {
         super(table);
     }
 }
 
-module.exports = departmentRepository;
+module.exports = DepartmentRepository;

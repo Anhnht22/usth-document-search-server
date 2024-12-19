@@ -8,9 +8,7 @@ async function auth(req, res, next) {
     const token = headers.authorization;
     let method = req.method;
     let baseUrl = req.baseUrl;
-    let url = req.originalUrl;
 
-    // check có token
     if (!token) {
         return res.status(500).json({
             success: false,
@@ -20,7 +18,6 @@ async function auth(req, res, next) {
 
     const secretKey = config.get("secretKey");
 
-    // xác thực token 
     let userInfo = null;
     try {
         userInfo = jwt.verify(token, secretKey);
@@ -35,7 +32,7 @@ async function auth(req, res, next) {
     const userData = await userService.list({
         username: userInfo.username,
     });
-    // check user đăng nhập
+
     if (
         !userData ||
         userData.length <= 0 ||
@@ -50,7 +47,6 @@ async function auth(req, res, next) {
 
     req.userData = userData.data[0];
 
-    // check phân quyền vai trò
     const roleService = new RoleService();
     const roleData = await roleService.roleAccess({
         active: 1,

@@ -163,7 +163,7 @@ class BaseRepository {
         });
     }
 
-    updateByColumn(column, value, params) {
+    updateByColumn(column, value, params, conn = null) {
         let keys = Object.keys(params);
         let values = Object.values(params);
 
@@ -184,7 +184,7 @@ class BaseRepository {
 
         return new Promise((resolve, reject) => {
             this.db.connection
-                .query(sql, objectParams)
+                .query(sql, objectParams, conn)
                 .then((res) => resolve(res))
                 .catch((err) => reject(err));
         });
@@ -206,7 +206,7 @@ class BaseRepository {
         });
     }
 
-    deletedPermanently(column, id) {
+    deletedPermanently(column, id, conn = null) {
         let objectParams = [];
 
         objectParams.push(id);
@@ -214,7 +214,7 @@ class BaseRepository {
 
         return new Promise((resolve, reject) => {
             this.db.connection
-                .query(sql, objectParams)
+                .query(sql, objectParams, conn)
                 .then((res) => resolve(res))
                 .catch((err) => reject(err));
         });

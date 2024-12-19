@@ -14,22 +14,31 @@ class DepartmentCollection extends BaseCollection {
             't.description "description"',
             't.active "active"'
         ]);
+
+        this.join("user_department ud", "ud.department_id", "t.department_id", "LEFT");
+
+        this.addGroupBy(["t.department_id"]);
+
         if (params.department_name) {
-            this.andWhere("department_name", "LIKE", params.department_name);
+            this.andWhere("t.department_name", "LIKE", params.department_name);
         }
         if (params.description) {
-            this.andWhere("description", "LIKE", params.description);
+            this.andWhere("t.description", "LIKE", params.description);
         }
         if (params.department_id) {
-            this.andWhere("department_id", "=", params.department_id);
+            this.andWhere("t.department_id", "=", params.department_id);
+        }
+        if (params.user_id) {
+            const listSearch = Array.isArray(params.user_id) ? params.user_id : [params.user_id];
+            this.andWhereIn("ud.user_id", "IN", listSearch.join(","));
         }
         if (params.active) {
             this.setOnlyActiveRecords(params.active);
         }
-        
+
     }
 
-    check(params){
+    check(params) {
         if (params.department_name) {
             this.andWhere("t.department_name", "=", params.department_name);
         }
