@@ -31,45 +31,30 @@ class UserCollection extends BaseCollection {
             'r.role_name "role_name"',
             'r.role_id "role_id"'
         ]);
-        this.addJoin("role r", "r.role_id","t.role_id", "LEFT JOIN");
+        this.addJoin("role r", "r.role_id", "t.role_id", "LEFT JOIN");
+        if (params.user_id) {
+            this.andWhere("user_id", "=", params.user_id);
+        }
         if (params.username) {
-            this.andWhere("username", "=", params.username);
+            this.andWhere("username", "LIKE", params.username);
         }
         if (params.password) {
             this.andWhere("password", "=", params.password);
         }
         if (params.email) {
-            this.andWhere("email", "=", params.email);
+            this.andWhere("email", "LIKE", params.email);
         }
         if (params.role_name) {
-            const roles = params.role_name;
-            if (Array.isArray(roles)) {
-                for (let i = 0; i < roles.length; i++) {
-                    this.andOrWhere("r.role_name", "=", roles[i], (i == 0) ? "first" : (i == roles.length-1) ? "last" : "middle");
-                }
-            } else {
-                this.andWhere("r.role_name", "=", roles);
-            }
+            const roles = Array.isArray(params.role_name) ? params.role_name : [params.role_name];
+            this.andWhereIn("r.role_name", "IN", roles.join(","));
         }
         if (params.role_id) {
-            const roles = params.role_id;
-            if (Array.isArray(roles)) {
-                for (let i = 0; i < roles.length; i++) {
-                    this.andOrWhere("r.role_id", "=", roles[i], (i == 0) ? "first" : (i == roles.length-1) ? "last" : "middle");
-                }
-            } else {
-                this.andWhere("r.role_id", "=", roles);
-            }
+            const roles = Array.isArray(params.role_id) ? params.role_id : [params.role_id];
+            this.andWhereIn("r.role_id", "IN", roles.join(","));
         }
         if (params.active) {
-            const actives = params.active;
-            if (Array.isArray(actives)) {
-                for (let i = 0; i < actives.length; i++) {
-                    this.andOrWhere("t.active", "=", actives[i], (i == 0) ? "first" : (i == actives.length-1) ? "last" : "middle");
-                }
-            } else {
-                this.andWhere("t.active", "=", actives);
-            }
+            const actives = Array.isArray(params.active) ? params.active : [params.active];
+            this.andWhereIn("t.active", "IN", actives.join(","));
         }
     }
 
@@ -87,7 +72,7 @@ class UserCollection extends BaseCollection {
             'r.role_name "role_name"',
             department
         ]);
-        this.addJoin("role r", "r.role_id","t.role_id", "LEFT JOIN");
+        this.addJoin("role r", "r.role_id", "t.role_id", "LEFT JOIN");
         if (params.username) {
             this.andWhere("t.username", "=", params.username);
         }
@@ -98,7 +83,7 @@ class UserCollection extends BaseCollection {
             this.setOnlyActiveRecords(params.active);
         }
     }
-    
+
 }
 
 module.exports = UserCollection;

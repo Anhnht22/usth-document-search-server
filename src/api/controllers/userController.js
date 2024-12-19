@@ -33,6 +33,11 @@ router.put('/update/:id', auth, (req, res) => {
     handleResponseAPI(req, res, _service.update(params,Number(req.params.id)));
 });
 
+router.put('/update-password/:id', auth, (req, res) => {
+    let params = req.body;
+    handleResponseAPI(req, res, _service.updatePass(params,Number(req.params.id)));
+});
+
 router.delete('/delete/:id', auth, (req, res) => {
     handleResponseAPI(req, res, _service.delete(req.params.id));
 });
