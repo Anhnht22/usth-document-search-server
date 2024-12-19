@@ -28,7 +28,7 @@ class roleService {
         if (params.limit === -999) isLimit = false;
 
         this.col.filters(params);
-        const sqlPage = this.col.sqlCount(isLimit);
+        const sqlPage = this.col.finallizeTotalCount(isLimit);
         const sql = this.col.finallize(isLimit);
 
         const [data] = await this.handle(this.repo.list(sql));
