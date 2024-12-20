@@ -12,16 +12,36 @@ const KeywordCollection = require("../collections/keywordCollection");
 const KeywordRepository = require("../repositories/keywordRepository");
 const TopicCollection = require("../collections/topicCollection");
 const TopicRepository = require("../repositories/topicRepository");
+const DocumentDepartmentCollection = require("../collections/documentDepartmentCollection");
+const DocumentDepartmentRepository = require("../repositories/documentDepartmentRepository");
+const DocumentSubjectCollection = require("../collections/documentSubjectCollection");
+const DocumentSubjectRepository = require("../repositories/documentSubjectRepository");
 const DocumentTopicCollection = require("../collections/documentTopicCollection");
 const DocumentTopicRepository = require("../repositories/documentTopicRepository");
+const DepartmentCollection = require("../collections/departmentCollection");
+const DepartmentRepository = require("../repositories/departmentRepository");
+const SubjectCollection = require("../collections/subjectCollection");
+const SubjectRepository = require("../repositories/subjectRepository");
 
 class documentService {
     constructor() {
         this.col = new DocumentCollection();
         this.repo = new DocumentRepository();
 
+        this.colDepartment = new DepartmentCollection();
+        this.repoDepartment = new DepartmentRepository();
+
+        this.colSubject = new SubjectCollection();
+        this.repoSubject = new SubjectRepository();
+
         this.colTopic = new TopicCollection();
         this.repoTopic = new TopicRepository();
+
+        this.colDocumentDepartment = new DocumentDepartmentCollection();
+        this.repoDocumentDepartment = new DocumentDepartmentRepository();
+
+        this.colDocumentSubject = new DocumentSubjectCollection();
+        this.repoDocumentSubject = new DocumentSubjectRepository();
 
         this.colDocumentTopic = new DocumentTopicCollection();
         this.repoDocumentTopic = new DocumentTopicRepository();
@@ -53,7 +73,7 @@ class documentService {
             this.col.setPage(page);
         }
         //
-        if (params.limit === -999) isLimit = false;
+        if (Number(params.limit) === -999) isLimit = false;
 
         this.col.filters(params);
 
@@ -183,6 +203,112 @@ class documentService {
                     };
                 }
             });
+
+
+
+            /**
+             * Got Department Document
+             */
+
+            this.colDocumentDepartment.addSelect([
+                "t.document_id",
+                "t.department_id",
+                "tp.department_name",
+            ]);
+            this.colDocumentDepartment.filters({ document_id: listDocumentId });
+            this.colDocumentDepartment.addJoin(`${this.colDepartment.table} tp`, "tp.department_id", "t.department_id", "LEFT JOIN");
+            this.colDocumentDepartment.addSort("t.document_id", "ASC");
+            const [documentDepartmentData, documentDepartmentErr] = await this.handle(
+                this.repoDocumentDepartment.list(
+                    this.colDocumentDepartment.finallize(false)
+                )
+            );
+
+            if (documentDepartmentErr) {
+                throw new ErrorResp({
+                    returnCode: 1,
+                    returnMessage: "Data document topic not found",
+                    trace: documentDepartmentErr,
+                });
+            }
+
+            // Create a Map for quick lookup
+            const documentDepartmentMap = new Map();
+            documentDepartmentData.forEach((item) => {
+                if (!documentDepartmentMap.has(item.document_id))
+                    documentDepartmentMap.set(item.document_id, []);
+
+                documentDepartmentMap.get(item.document_id).push(item);
+            });
+
+            // Loop through data and push to respData
+            respData = respData.map((item) => {
+                if (documentDepartmentMap.has(item.document_id)) {
+                    return {
+                        ...item,
+                        department: documentDepartmentMap.get(item.document_id),
+                    };
+                } else {
+                    return {
+                        ...item,
+                        department: [],
+                    };
+                }
+            });
+
+
+
+
+
+            /**
+             * Got Subject Document
+             */
+
+            this.colDocumentSubject.addSelect([
+                "t.document_id",
+                "t.subject_id",
+                "tp.subject_name",
+            ]);
+            this.colDocumentSubject.filters({ document_id: listDocumentId });
+            this.colDocumentSubject.addJoin(`${this.colSubject.table} tp`, "tp.subject_id", "t.subject_id", "LEFT JOIN");
+            this.colDocumentSubject.addSort("t.document_id", "ASC");
+            const [documentSubjectData, documentSubjectErr] = await this.handle(
+                this.repoDocumentSubject.list(
+                    this.colDocumentSubject.finallize(false)
+                )
+            );
+
+            if (documentSubjectErr) {
+                throw new ErrorResp({
+                    returnCode: 1,
+                    returnMessage: "Data document topic not found",
+                    trace: documentSubjectErr,
+                });
+            }
+
+            // Create a Map for quick lookup
+            const documentSubjectMap = new Map();
+            documentSubjectData.forEach((item) => {
+                if (!documentSubjectMap.has(item.document_id))
+                    documentSubjectMap.set(item.document_id, []);
+
+                documentSubjectMap.get(item.document_id).push(item);
+            });
+
+            // Loop through data and push to respData
+            respData = respData.map((item) => {
+                if (documentSubjectMap.has(item.document_id)) {
+                    return {
+                        ...item,
+                        subject: documentSubjectMap.get(item.document_id),
+                    };
+                } else {
+                    return {
+                        ...item,
+                        subject: [],
+                    };
+                }
+            });
         }
 
         return {
@@ -213,7 +339,7 @@ class documentService {
             this.col.setPage(page);
         }
         //
-        if (params.limit === -999) isLimit = false;
+        if (Number(params.limit) === -999) isLimit = false;
 
         this.col.filtersSearch(params, userData);
 
@@ -350,24 +476,24 @@ class documentService {
             }
         }
 
-        if (params.topic_id === undefined || params.topic_id == 0) {
+        if (params.department_id === undefined || params.department_id == 0) {
             throw new ErrorResp(
-                { returnCode: 1, returnMessage: "Topic is required" },
-                404
+                { returnCode: 1, returnMessage: "Department is required" }
             );
         }
 
-        const topicService = new TopicService();
-        const topicData = await topicService.list({
-            topic_id: params.topic_id,
-            active: 1,
-        });
-        if (topicData.data.length < 1) {
+        if (params.subject_id === undefined || params.subject_id == 0) {
             throw new ErrorResp(
-                { returnCode: 1, returnMessage: "Topic not found" },
-                404
+                { returnCode: 1, returnMessage: "Subject is required" }
             );
         }
+
+        if (params.topic_id === undefined || params.topic_id == 0) {
+            throw new ErrorResp(
+                { returnCode: 1, returnMessage: "Topic is required" }
+            );
+        }
+
         this.col.check(params);
         const sql = this.col.finallize(true);
         let [dataCheck] = await this.handle(this.repo.list(sql));
@@ -435,9 +561,55 @@ class documentService {
                 }
             }
 
+            for (let i = 0; i < params.department_id.length; i++) {
+                const itemId = params.department_id[i];
+
+                const [docDepartmentData, docDepartmentErr] = await this.handle(
+                    this.repoDocumentDepartment.create(
+                        {
+                            document_id: data.insertId,
+                            department_id: itemId,
+                            active: 1,
+                        },
+                        conn
+                    )
+                );
+
+                if (docDepartmentErr) {
+                    throw new ErrorResp({
+                        returnCode: 1,
+                        returnMessage: "Create document Department fail",
+                        trace: docDepartmentErr,
+                    });
+                }
+            }
+
+            for (let i = 0; i < params.subject_id.length; i++) {
+                const itemId = params.subject_id[i];
+
+                const [docSubjectData, docSubjectErr] = await this.handle(
+                    this.repoDocumentSubject.create(
+                        {
+                            document_id: data.insertId,
+                            subject_id: itemId,
+                            active: 1,
+                        },
+                        conn
+                    )
+                );
+
+                if (docSubjectErr) {
+                    throw new ErrorResp({
+                        returnCode: 1,
+                        returnMessage: "Create document Subject fail",
+                        trace: docSubjectErr,
+                    });
+                }
+            }
+
             for (let i = 0; i < params.topic_id.length; i++) {
                 const itemId = params.topic_id[i];
-                
+
                 const [docTopicData, docTopicErr] = await this.handle(
                     this.repoDocumentTopic.create(
                         {
@@ -625,7 +797,7 @@ class documentService {
 
                 for (let i = 0; i < params.keyword_ids.length; i++) {
                     const keyword_id = params.keyword_ids[i];
-                    
+
                     const [keywordData, keywordErr] = await this.handle(
                         this.repoKeywordDocument.create(
                             {
@@ -670,7 +842,7 @@ class documentService {
 
                 for (let i = 0; i < params.topic_id.length; i++) {
                     const itemId = params.topic_id[i];
-                    
+
                     const [docTopicData, docTopicErr] = await this.handle(
                         this.repoDocumentTopic.create(
                             {
@@ -687,6 +859,86 @@ class documentService {
                             returnCode: 1,
                             returnMessage: "Create document topic fail",
                             trace: docTopicErr,
+                        });
+                    }
+                }
+            }
+
+            if (params.department_id) {
+                const [dataDeleteOld, errDeleteOld] = await this.handle(
+                    this.repoDocumentDepartment.deletedPermanently(
+                        "document_id", id,
+                        conn
+                    )
+                );
+
+                if (errDeleteOld) {
+                    throw new ErrorResp({
+                        returnCode: 1,
+                        returnMessage: "Delete department Document fail",
+                        trace: errDeleteOld,
+                    });
+                }
+
+                for (let i = 0; i < params.department_id.length; i++) {
+                    const itemId = params.department_id[i];
+
+                    const [docData, docErr] = await this.handle(
+                        this.repoDocumentDepartment.create(
+                            {
+                                document_id: id,
+                                department_id: itemId,
+                                active: 1,
+                            },
+                            conn
+                        )
+                    );
+
+                    if (docErr) {
+                        throw new ErrorResp({
+                            returnCode: 1,
+                            returnMessage: "Create document department fail",
+                            trace: docErr,
+                        });
+                    }
+                }
+            }
+
+            if (params.subject_id) {
+                const [dataDeleteOld, errDeleteOld] = await this.handle(
+                    this.repoDocumentSubject.deletedPermanently(
+                        "document_id", id,
+                        conn
+                    )
+                );
+
+                if (errDeleteOld) {
+                    throw new ErrorResp({
+                        returnCode: 1,
+                        returnMessage: "Delete subject Document fail",
+                        trace: errDeleteOld,
+                    });
+                }
+
+                for (let i = 0; i < params.subject_id.length; i++) {
+                    const itemId = params.subject_id[i];
+
+                    const [docData, docErr] = await this.handle(
+                        this.repoDocumentSubject.create(
+                            {
+                                document_id: id,
+                                subject_id: itemId,
+                                active: 1,
+                            },
+                            conn
+                        )
+                    );
+
+                    if (docErr) {
+                        throw new ErrorResp({
+                            returnCode: 1,
+                            returnMessage: "Create document subject fail",
+                            trace: docErr,
                         });
                     }
                 }

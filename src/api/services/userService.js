@@ -47,7 +47,7 @@ class UserService {
             this.col.setPage(page);
         }
         //
-        if (params.limit === -999) isLimit = false;
+        if (Number(params.limit) === -999) isLimit = false;
 
         this.col.filters(params);
 
@@ -91,7 +91,7 @@ class UserService {
             this.col.setPage(page);
         }
         //
-        if (params.limit === -999) isLimit = false;
+        if (Number(params.limit) === -999) isLimit = false;
 
         this.col.filtersUser(params);
 
@@ -258,7 +258,7 @@ class UserService {
             this.col.setPage(page);
         }
         //
-        if (params.limit === -999) isLimit = false;
+        if (Number(params.limit) === -999) isLimit = false;
 
         this.col.filtersUserDepartment(params);
         if (order) {

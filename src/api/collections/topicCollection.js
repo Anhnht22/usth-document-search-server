@@ -17,6 +17,8 @@ class TopicCollection extends BaseCollection {
 
         this.addJoin("topic_subject ts", "ts.topic_id", "t.topic_id", "LEFT JOIN");
         this.addJoin("subject s", "s.subject_id", "ts.subject_id", "LEFT JOIN");
+        this.join("subject_department sd", "sd.subject_id", "s.subject_id", "LEFT");
+
         this.addGroupBy(["t.topic_id", "t.topic_name", "t.active"]);
 
         if (params.subject_name) {
@@ -25,6 +27,10 @@ class TopicCollection extends BaseCollection {
         if (params.subject_id) {
             const subject_ids = Array.isArray(params.subject_id) ? params.subject_id : [params.subject_id];
             this.andWhereIn("ts.subject_id", "IN", subject_ids.join(","));
+        }
+        if (params.department_id) {
+            const department_ids = Array.isArray(params.department_id) ? params.department_id : [params.department_id];
+            this.andWhereIn("sd.department_id", "IN", department_ids.join(","));
         }
         if (params.topic_name) {
             this.andWhere("t.topic_name", "LIKE", params.topic_name);

@@ -38,7 +38,7 @@ class SubjectService {
             this.col.setPage(page);
         }
         //
-        if (params.limit === -999) isLimit = false;
+        if (Number(params.limit) === -999) isLimit = false;
 
         this.col.filters(params);
 

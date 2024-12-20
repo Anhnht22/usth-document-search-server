@@ -25,7 +25,7 @@ class roleService {
             this.col.setPage(page);
         }
         //
-        if (params.limit === -999) isLimit = false;
+        if (Number(params.limit) === -999) isLimit = false;
 
         this.col.filters(params);
         const sqlPage = this.col.finallizeTotalCount(isLimit);
@@ -62,7 +62,7 @@ class roleService {
             this.col.setPage(page);
         }
         //
-        if (params.limit === -999) isLimit = false;
+        if (Number(params.limit) === -999) isLimit = false;
 
         this.col.filtersAccess(params);
 

@@ -19,6 +19,8 @@ class documentCollection extends BaseCollection {
             'u.username "username"',
         ]);
 
+        this.addJoin("document_department dd", "dd.document_id", "t.document_id", "LEFT JOIN");
+        this.addJoin("document_subject ds", "ds.document_id", "t.document_id", "LEFT JOIN");
         this.addJoin("document_topic dt", "dt.document_id", "t.document_id", "LEFT JOIN");
         this.addJoin("topic p", "p.topic_id", "dt.topic_id", "LEFT JOIN");
         this.addJoin("user u", "u.user_id", "t.uploaded_by", "LEFT JOIN");
@@ -61,6 +63,16 @@ class documentCollection extends BaseCollection {
             this.andWhereIn("p.topic_name", "IN", topic_names.join(","));
         }
 
+        if (params.department_id) {
+            const department_ids = params.department_id;
+            this.andWhereIn("dd.department_id", "IN", department_ids.join(","));
+        }
+
+        if (params.subject_id) {
+            const subject_ids = params.subject_id;
+            this.andWhereIn("ds.subject_id", "IN", subject_ids.join(","));
+        }
+
         if (params.topic_id) {
             const topic_ids = params.topic_id;
             this.andWhereIn("p.topic_id", "IN", topic_ids.join(","));
@@ -99,12 +111,12 @@ class documentCollection extends BaseCollection {
             "u.user_id",
         ]);
 
+        this.join("document_department dd", "dd.document_id", "t.document_id", "INNER");
+        this.join("department d", "d.department_id", "dd.department_id", "INNER");
+        this.join("document_subject ds", "ds.document_id", "t.document_id", "INNER");
+        this.join("subject s", "s.subject_id", "ds.subject_id", "INNER");
         this.join("document_topic dt", "dt.document_id", "t.document_id", "INNER");
         this.join("topic p", "p.topic_id", "dt.topic_id", "INNER");
-        this.join("topic_subject tp", "tp.topic_id", "p.topic_id", "INNER");
-        this.join("subject s", "s.subject_id", "tp.subject_id", "INNER");
-        this.join("subject_department sd", "sd.subject_id", "s.subject_id", "INNER");
-        this.join("department d", "d.department_id", "sd.department_id", "INNER");
         this.join("user u", "u.user_id", "t.uploaded_by", "INNER");
         this.join("keyword_document kd", "kd.document_id", "t.document_id", "LEFT");
         this.join("keyword k", "k.keyword_id", "kd.keyword_id", "LEFT");
@@ -144,6 +156,11 @@ class documentCollection extends BaseCollection {
             } else {
                 this.andWhere("k.keyword", "=", keyword);
             }
+        }
+
+        if (params.keyword_id) {
+            const data = Array.isArray(params.keyword_id) ? params.keyword_id : [params.keyword_id];
+            this.andWhereIn("k.keyword_id", "IN", data.join(","));
         }
 
         if (params.topic_name) {
