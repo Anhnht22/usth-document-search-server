@@ -20,6 +20,8 @@ class subjectCollection extends BaseCollection {
 
         this.addGroupBy(["t.subject_id"]);
 
+        this.andWhere("sd.active", "=", 1);
+
         if (params.subject_name) {
             this.andWhere("t.subject_name", "LIKE", params.subject_name);
         }
