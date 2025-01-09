@@ -760,6 +760,7 @@ class documentService {
                     uploaded_by: userData.user_id,
                     upload_date: date,
                     status: params.status,
+                    active: params.active,
                 },
                     conn
                 )
