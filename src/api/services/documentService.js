@@ -725,20 +725,24 @@ class documentService {
             }
         }
 
-        this.col.check(params);
-        const sql = this.col.finallize(true);
-        let [dataCheck, errCheck] = await this.handle(this.repo.list(sql));
+        this.col.check({
+            document_id: id
+        });
+        const sqlCheckExists = this.col.finallize(true);
+        let [dataCheckExists, errCheckExists] = await this.handle(this.repo.list(sqlCheckExists));
 
-        if (errCheck || !dataCheck || dataCheck.length < 1) {
+        if (errCheckExists || !dataCheckExists  || dataCheckExists.length <= 0) {
             throw new ErrorResp(
-                {
-                    returnCode: 1,
-                    returnMessage: "Document not found",
-                    trace: errCheck,
-                },
+                { returnCode: 3, returnMessage: "Document not found" },
                 404
             );
         }
+
+        this.col.check({
+            title: params.title
+        });
+        const sql = this.col.finallize(true);
+        let [dataCheck, errCheck] = await this.handle(this.repo.list(sql));
 
         if (dataCheck.length >= 1 && dataCheck[0].document_id != id) {
             throw new ErrorResp(

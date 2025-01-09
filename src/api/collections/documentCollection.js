@@ -93,6 +93,9 @@ class documentCollection extends BaseCollection {
         if (params.title) {
             this.andWhere("t.title", "=", params.title);
         }
+        if (params.document_id) {
+            this.andWhere("t.document_id", "=", params.document_id);
+        }
     }
 
     filtersSearch(params, userData) {
